@@ -13,6 +13,7 @@ const ReservationPage = () => {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [deleteType, setDeleteType] = useState('SOFT');
 
   useEffect(() => {
     fetchReservations();
@@ -40,12 +41,18 @@ const ReservationPage = () => {
   useEffect(() => {
     // Apply filters
     let result = [...reservations];
-    
+  
     // Filter by status
     if (statusFilter !== 'ALL') {
-      result = result.filter(reservation => reservation.status === statusFilter);
+      if (statusFilter === 'COMPLETED') {
+        result = result.filter(reservation => 
+          reservation.status === 'COMPLETED' || reservation.status === 'CANCELED' // Include soft deleted reservations
+        );
+      } else {
+        result = result.filter(reservation => reservation.status === statusFilter);
+      }
     }
-    
+  
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -56,7 +63,7 @@ const ReservationPage = () => {
           reservation.table.tableNumber.toString().includes(term)
       );
     }
-    
+  
     setFilteredReservations(result);
   }, [reservations, searchTerm, statusFilter]);
 
@@ -66,16 +73,25 @@ const ReservationPage = () => {
   };
 
   const handleDeleteReservation = async () => {
-    if (!selectedReservation) return;
-    
+    if (!selectedReservation) {
+      console.log("No reservation selected");
+      return;
+    }
+  
+    console.log("Deleting reservation:", selectedReservation);
+    console.log("Delete type:", deleteType);
+  
+    // Use the correct function names from the reservationService
+    const deleteFunction = deleteType === 'SOFT'
+      ? reservationService.cancelReservation  // Soft delete
+      : reservationService.deleteReservation;  // Hard delete
+  
     try {
-      const response = await reservationService.deleteReservation(selectedReservation.id);
-      
+      const response = await deleteFunction(selectedReservation.id);
       if (response.success) {
         toast.success('Reservasi berhasil dihapus');
         setShowModal(false);
-        // Refresh the list
-        fetchReservations();
+        fetchReservations(); // Refresh the list
       } else {
         toast.error(response.message || 'Gagal menghapus reservasi');
       }
@@ -83,7 +99,7 @@ const ReservationPage = () => {
       console.error('Delete reservation error:', error);
       toast.error('Gagal menghapus reservasi');
     }
-  };
+  };   
 
   const closeModal = () => {
     setShowModal(false);
@@ -267,7 +283,34 @@ const ReservationPage = () => {
             <p className="text-red-600 text-sm mb-6">
               Perhatian: Tindakan ini tidak dapat dibatalkan.
             </p>
-            
+
+            {/* Soft and Hard Delete Options */}
+            <div className="flex items-center space-x-4 mb-6">
+              <div>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="deleteType"
+                    value="SOFT"
+                    checked={deleteType === 'SOFT'}
+                    onChange={() => setDeleteType('SOFT')}
+                    className="form-radio"
+                  />
+                  <span className="ml-2">Hapus Soft (Tandai sebagai Selesai)</span>
+
+                  <input
+                    type="radio"
+                    name="deleteType"
+                    value="HARD"
+                    checked={deleteType === 'HARD'}
+                    onChange={() => setDeleteType('HARD')}
+                    className="form-radio"
+                  />
+                  <span className="ml-2">Hapus Hard (Hapus Permanen)</span>
+                </label>
+              </div>
+            </div>
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={closeModal}
@@ -285,6 +328,7 @@ const ReservationPage = () => {
           </div>
         </div>
       )}
+
     </Layout>
   );
 };

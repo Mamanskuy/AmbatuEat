@@ -18,7 +18,7 @@ const getAllReservations = async () => {
   return response.data;
 };
 
-// Cancel reservation (user - soft delete)
+// Reservation Success (user - soft delete)
 const cancelReservation = async (id) => {
   const response = await api.delete(`/reservations/user/${id}`);
   return response.data;

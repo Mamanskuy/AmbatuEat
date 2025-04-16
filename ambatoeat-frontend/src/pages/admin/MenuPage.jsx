@@ -20,7 +20,7 @@ const MenuPage = () => {
     description: '',
     price: '',
     category: 'FOOD',
-    image: null
+    image: ''
   });
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -32,7 +32,7 @@ const MenuPage = () => {
     setLoading(true);
     try {
       const response = await menuService.getAllMenuItems();
-      
+
       if (response.success) {
         setMenuItems(response.data);
         setFilteredItems(response.data);
@@ -50,22 +50,22 @@ const MenuPage = () => {
   useEffect(() => {
     // Apply filters
     let result = [...menuItems];
-    
+
     // Filter by category
     if (categoryFilter !== 'ALL') {
       result = result.filter(item => item.category === categoryFilter);
     }
-    
+
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
-        item => 
+        item =>
           item.name.toLowerCase().includes(term) ||
           item.description.toLowerCase().includes(term)
       );
     }
-    
+
     setFilteredItems(result);
   }, [menuItems, searchTerm, categoryFilter]);
 
@@ -102,60 +102,41 @@ const MenuPage = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value, files } = e.target;
-    
-    if (name === 'image') {
-      if (files && files[0]) {
-        setFormData({
-          ...formData,
-          image: files[0]
-        });
-        
-        // Preview image
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setImagePreview(e.target.result);
-        };
-        reader.readAsDataURL(files[0]);
-      }
-    } else if (name === 'price') {
-      // Only allow numeric input for price
-      if (value === '' || /^\d+(\.\d{0,2})?$/.test(value)) {
+    const { name, value } = e.target;
+    if (name === 'price') {
+      // Validasi input harga: angka dengan maksimal 2 desimal
+      if (value === '' || /^\d*(\.\d{0,2})?$/.test(value)) {
         setFormData({
           ...formData,
           [name]: value
         });
       }
     } else {
+      // Handle input biasa
       setFormData({
         ...formData,
         [name]: value
       });
     }
+    
   };
 
   const handleSubmit = async (e) => {
+    console.log(formData);
     e.preventDefault();
-    
-    // Validate form
-    if (!formData.name || !formData.description || !formData.price || !formData.category) {
-      toast.error('Semua kolom harus diisi');
-      return;
-    }
-    
     try {
       let response;
-      
+
       if (modalMode === 'add') {
         response = await menuService.createMenuItem(formData);
       } else {
         response = await menuService.updateMenuItem(selectedItem.id, formData);
       }
-      
+
       if (response.success) {
         toast.success(
-          modalMode === 'add' 
-            ? 'Menu berhasil ditambahkan' 
+          modalMode === 'add'
+            ? 'Menu berhasil ditambahkan'
             : 'Menu berhasil diperbarui'
         );
         setShowModal(false);
@@ -171,10 +152,10 @@ const MenuPage = () => {
 
   const handleDeleteMenu = async () => {
     if (!selectedItem) return;
-    
+
     try {
       const response = await menuService.deleteMenuItem(selectedItem.id);
-      
+
       if (response.success) {
         toast.success('Menu berhasil dihapus');
         setShowDeleteModal(false);
@@ -246,7 +227,7 @@ const MenuPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <FiFilter className="text-gray-500" />
               <select
@@ -262,7 +243,7 @@ const MenuPage = () => {
               </select>
             </div>
           </div>
-          
+
           <button
             onClick={openAddModal}
             className="btn btn-primary flex items-center justify-center"
@@ -298,8 +279,8 @@ const MenuPage = () => {
                   </p>
                   <div className="mt-4 flex justify-between items-center">
                     <span className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
-                      {item.category === 'FOOD' ? 'Makanan' : 
-                       item.category === 'DRINK' ? 'Minuman' : 'Dessert'}
+                      {item.category === 'FOOD' ? 'Makanan' :
+                        item.category === 'DRINK' ? 'Minuman' : 'Dessert'}
                     </span>
                     <div className="flex space-x-2">
                       <button
@@ -340,7 +321,7 @@ const MenuPage = () => {
             <h3 className="text-xl font-semibold mb-4">
               {modalMode === 'add' ? 'Tambah Menu Baru' : 'Edit Menu'}
             </h3>
-            
+
             <form onSubmit={handleSubmit}>
               {/* Name */}
               <div className="mb-4">
@@ -357,7 +338,7 @@ const MenuPage = () => {
                   required
                 />
               </div>
-              
+
               {/* Description */}
               <div className="mb-4">
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
@@ -373,7 +354,7 @@ const MenuPage = () => {
                   required
                 ></textarea>
               </div>
-              
+
               {/* Price */}
               <div className="mb-4">
                 <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
@@ -390,7 +371,7 @@ const MenuPage = () => {
                   required
                 />
               </div>
-              
+
               {/* Category */}
               <div className="mb-4">
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
@@ -409,26 +390,25 @@ const MenuPage = () => {
                   <option value="DESSERT">Pencuci Mulut</option>
                 </select>
               </div>
-              
-              {/* Image */}
+
+              {/* Image URL */}
               <div className="mb-4">
                 <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
                   Gambar
                 </label>
                 <input
-                  type="file"
+                  type="url"
                   id="image"
                   name="image"
                   className="input p-2"
                   onChange={handleInputChange}
-                  accept="image/*"
+                  placeholder="Masukkan URL gambar"
                   {...(modalMode === 'add' && { required: true })}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Format: JPG, JPEG, PNG, WEBP. Maks: 5MB
+                  Masukkan URL gambar yang valid (contoh: https://example.com/image.jpg)
                 </p>
               </div>
-              
               {/* Image Preview */}
               {imagePreview && (
                 <div className="mb-4">
@@ -444,7 +424,7 @@ const MenuPage = () => {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
@@ -476,7 +456,7 @@ const MenuPage = () => {
             <p className="text-red-600 text-sm mb-6">
               Perhatian: Tindakan ini tidak dapat dibatalkan.
             </p>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={closeModal}

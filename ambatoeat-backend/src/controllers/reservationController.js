@@ -100,9 +100,6 @@ const createReservation = async (req, res) => {
 const getAllReservations = async (req, res) => {
   try {
     const reservations = await prisma.reservation.findMany({
-      where: {
-        deletedAt: null
-      },
       include: {
         table: true,
         user: {
@@ -170,6 +167,7 @@ const softDeleteReservation = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const userRole = req.user.role;
 
     // Check if the reservation exists
     const reservation = await prisma.reservation.findUnique({
@@ -183,8 +181,8 @@ const softDeleteReservation = async (req, res) => {
       });
     }
 
-    // Check if the reservation belongs to the user
-    if (reservation.userId !== userId) {
+    // If the user is not an admin, check if the reservation belongs to them
+    if (userRole !== 'ADMIN' && reservation.userId !== userId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. This reservation does not belong to you'
@@ -195,8 +193,8 @@ const softDeleteReservation = async (req, res) => {
     const updatedReservation = await prisma.reservation.update({
       where: { id: parseInt(id) },
       data: {
-        deletedAt: new Date(),
-        status: 'CANCELED'
+        deletedAt: new Date(), // Mark as deleted
+        status: 'COMPLETED'     // Change status to 'COMPLETED'
       }
     });
 

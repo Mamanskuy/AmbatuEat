@@ -48,21 +48,16 @@ const createMenuItem = async (req, res) => {
         });
       }
 
-      const { name, description, price, category } = req.body;
+      const { name, description, price, category, image } = req.body;
 
       // Validate required fields
-      if (!name || !description || !price || !category) {
+      if (!name || !description || !price || !category  || !image) {
         return res.status(400).json({
           success: false,
           message: 'Name, description, price, and category are required'
         });
       }
-
-      // Process file if uploaded
-      let imagePath = null;
-      if (req.file) {
-        imagePath = `/uploads/menu/${req.file.filename}`;
-      }
+      
 
       // Create new menu item
       const newMenuItem = await prisma.menuItem.create({
@@ -71,7 +66,7 @@ const createMenuItem = async (req, res) => {
           description,
           price: parseFloat(price),
           category,
-          image: imagePath
+          image
         }
       });
 
@@ -151,73 +146,52 @@ const getMenuItemsByCategory = async (req, res) => {
   }
 };
 
-// Update a menu item
+// Update a menu item (Modified for URL image)
 const updateMenuItem = async (req, res) => {
-  try {
-    upload(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message
-        });
-      }
-      
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    try {
       const { id } = req.params;
       const { name, description, price, category } = req.body;
-      
-      // Check if the menu item exists
+      const image = req.file ? `/uploads/menu/${req.file.filename}` : null;
+
       const menuItem = await prisma.menuItem.findUnique({
         where: { id: parseInt(id) }
       });
-      
+
       if (!menuItem) {
-        return res.status(404).json({
-          success: false,
-          message: 'Menu item not found'
-        });
+        return res.status(404).json({ success: false, message: 'Menu item not found' });
       }
-      
-      // Prepare update data
-      const updateData = {};
-      
-      if (name) updateData.name = name;
-      if (description) updateData.description = description;
-      if (price) updateData.price = parseFloat(price);
-      if (category) updateData.category = category;
-      
-      // Process file if uploaded
-      if (req.file) {
-        // Delete old image if exists
-        if (menuItem.image) {
-          const oldImagePath = path.join(__dirname, '../..', menuItem.image);
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-          }
-        }
-        
-        updateData.image = `/uploads/menu/${req.file.filename}`;
-      }
-      
-      // Update menu item
+
       const updatedMenuItem = await prisma.menuItem.update({
         where: { id: parseInt(id) },
-        data: updateData
+        data: {
+          name: name || menuItem.name,
+          description: description || menuItem.description,
+          price: price ? parseFloat(price) : menuItem.price,
+          category: category || menuItem.category,
+          image: image || menuItem.image
+        }
       });
-      
+
       return res.status(200).json({
         success: true,
         message: 'Menu item updated successfully',
         data: updatedMenuItem
       });
-    });
-  } catch (error) {
-    console.error('Update menu item error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
+
+    } catch (error) {
+      console.error('Update menu item error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error',
+        error: error.message
+      });
+    }
+  });
 };
 
 // Delete a menu item
